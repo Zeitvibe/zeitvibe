@@ -1,0 +1,92 @@
+{
+  "2026-01-26": {
+    "Raspberry Pi 5": 401,
+    "Orange Pi 5": 123,
+    "VIM3": 31,
+    "Rock Pi 5": 63,
+    "Radxa X4": 8,
+    "Banana Pi M5": 47,
+    "NVIDIA Jetson Nano": 83,
+    "BeagleBone Black": 28
+  },
+  "2026-02-02": {
+    "Raspberry Pi 5": 390,
+    "Orange Pi 5": 127,
+    "VIM3": 30,
+    "Rock Pi 5": 63,
+    "Radxa X4": 7,
+    "Banana Pi M5": 46,
+    "NVIDIA Jetson Nano": 83,
+    "BeagleBone Black": 19
+  },
+  "2026-02-09": {
+    "Raspberry Pi 5": 387,
+    "Orange Pi 5": 139,
+    "VIM3": 41,
+    "Rock Pi 5": 66,
+    "Radxa X4": 14,
+    "Banana Pi M5": 47,
+    "NVIDIA Jetson Nano": 85,
+    "BeagleBone Black": 26
+  },
+  "2026-02-16": {
+    "Raspberry Pi 5": 374,
+    "Orange Pi 5": 155,
+    "VIM3": 50,
+    "Rock Pi 5": 68,
+    "Radxa X4": 24,
+    "Banana Pi M5": 39,
+    "NVIDIA Jetson Nano": 87,
+    "BeagleBone Black": 19
+  },
+  "2026-02-23": {
+    "Raspberry Pi 5": 365,
+    "Orange Pi 5": 166,
+    "VIM3": 53,
+    "Rock Pi 5": 69,
+    "Radxa X4": 25,
+    "Banana Pi M5": 47,
+    "NVIDIA Jetson Nano": 87,
+    "BeagleBone Black": 16
+  },
+  "2026-03-02": {
+    "Raspberry Pi 5": 363,
+    "Orange Pi 5": 178,
+    "VIM3": 56,
+    "Rock Pi 5": 80,
+    "Radxa X4": 35,
+    "Banana Pi M5": 47,
+    "NVIDIA Jetson Nano": 93,
+    "BeagleBone Black": 17
+  },
+  "2026-03-09": {
+    "Raspberry Pi 5": 351,
+    "Orange Pi 5": 194,
+    "VIM3": 69,
+    "Rock Pi 5": 78,
+    "Radxa X4": 43,
+    "Banana Pi M5": 39,
+    "NVIDIA Jetson Nano": 95,
+    "BeagleBone Black": 20
+  },
+  "2026-03-16": {
+    "Raspberry Pi 5": 349,
+    "Orange Pi 5": 208,
+    "VIM3": 76,
+    "Rock Pi 5": 89,
+    "Radxa X4": 51,
+    "Banana Pi M5": 37,
+    "NVIDIA Jetson Nano": 102,
+    "BeagleBone Black": 18
+  },
+  "2026-03-23": {
+    "Raspberry Pi 5": 340,
+    "Orange Pi 5": 218,
+    "VIM3": 92,
+    "Rock Pi 5": 84,
+    "Radxa X4": 64,
+    "Banana Pi M5": 43,
+    "NVIDIA Jetson Nano": 101,
+    "BeagleBone Black": 20
+  }
+}
