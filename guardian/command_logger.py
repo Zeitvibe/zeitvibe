@@ -10,7 +10,9 @@ from datetime import datetime
 import re
 import time
 import subprocess
+from pathlib import Path
 
+# Colors
 CYAN = '\033[96m'
 GREEN = '\033[92m'
 YELLOW = '\033[93m'
@@ -21,24 +23,36 @@ RESET = '\033[0m'
 
 DB_PATH = os.path.expanduser("~/zeitvibe_guardian.db")
 
-# Git aliases to watch
+# Git aliases with descriptions
 GIT_ALIASES = {
     "gs": "git status - Show working tree status",
+    "gst": "git status - Show working tree status",
     "ga": "git add - Stage files for commit",
+    "gaa": "git add . - Stage all files",
     "gc": "git commit -m - Commit staged changes with message",
+    "gcm": "git commit -m - Commit with message",
     "gp": "git push - Upload local commits to remote",
     "gl": "git log --oneline --graph - View commit history",
+    "glo": "git log --oneline - One-line commit history",
     "gd": "git diff - Show changes not yet staged",
     "gco": "git checkout - Switch branches or restore files",
     "gb": "git branch - List, create, or delete branches",
     "gpl": "git pull - Fetch and merge from remote",
+    "gcl": "git clone - Clone a repository",
+    "grh": "git reset --hard - Hard reset (dangerous!)",
+    "grhh": "git reset --hard HEAD - Hard reset to HEAD",
+    "gstash": "git stash - Stash changes",
 }
 
 # Files/folders that should NEVER be committed
 DANGEROUS_FILES = [
     "venv/", ".venv/", "__pycache__/", "*.pyc", ".DS_Store",
-    ".env", ".pytest_cache/", "node_modules/", "*.log", "*.db"
+    ".env", ".pytest_cache/", "node_modules/", "*.log", "*.db",
+    "secrets/", "*.key", "*.pem", "*.pkl", "*.onnx"
 ]
+
+# Remember last used projects (simple memory)
+RECENT_PROJECTS_FILE = os.path.expanduser("~/.zeitvibe_recent_projects")
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -99,35 +113,70 @@ def scan_git_projects():
             projects.append(path)
     return projects
 
-def check_git_add(command):
-    """Check if 'git add' might include dangerous files"""
+def get_recent_projects():
+    """Get recently used projects from memory file"""
+    if os.path.exists(RECENT_PROJECTS_FILE):
+        try:
+            with open(RECENT_PROJECTS_FILE, 'r') as f:
+                return [line.strip() for line in f.readlines() if line.strip()]
+        except:
+            pass
+    return []
+
+def save_recent_project(project_path):
+    """Save a project to recent projects list"""
+    recent = get_recent_projects()
+    if project_path in recent:
+        recent.remove(project_path)
+    recent.insert(0, project_path)
+    recent = recent[:5]  # Keep last 5
+    try:
+        with open(RECENT_PROJECTS_FILE, 'w') as f:
+            for p in recent:
+                f.write(f"{p}\n")
+    except:
+        pass
+
+def check_git_add_dangerous(command):
+    """Check if git add might include dangerous files"""
     if "git add" not in command:
         return None
     
     # Check if adding everything
     if ". " in command or " -A" in command or " --all" in command:
-        return "⚠️ Adding ALL files! Check for venv/__pycache__ before committing."
-    
+        dangerous = []
+        for pattern in DANGEROUS_FILES:
+            if pattern.endswith('/'):
+                if os.path.exists(pattern):
+                    dangerous.append(pattern)
+            elif pattern.startswith('*'):
+                ext = pattern[1:]
+                for f in os.listdir('.'):
+                    if f.endswith(ext):
+                        dangerous.append(f)
+        if dangerous:
+            return f"⚠️ Adding ALL files! Found: {', '.join(dangerous[:3])}"
     return None
 
-def check_dangerous_files():
-    """Check for dangerous files in current directory"""
-    dangerous_found = []
+def check_dangerous_files_in_repo():
+    """Check current directory for dangerous files that should be ignored"""
+    dangerous = []
     for pattern in DANGEROUS_FILES:
         if pattern.endswith('/'):
-            # Directory check
             if os.path.exists(pattern):
-                dangerous_found.append(pattern)
+                dangerous.append(pattern)
         elif pattern.startswith('*'):
-            # Wildcard check (simplified)
             ext = pattern[1:]
             for f in os.listdir('.'):
                 if f.endswith(ext):
-                    dangerous_found.append(f)
-    return dangerous_found[:5]  # Limit to 5
+                    dangerous.append(f)
+        else:
+            if os.path.exists(pattern):
+                dangerous.append(pattern)
+    return dangerous[:5]
 
 def show_git_tutorial(command):
-    """Show mini tutorial for git commands"""
+    """Show mini tutorial for git commands and aliases"""
     cmd_parts = command.split()
     if not cmd_parts:
         return None
@@ -151,6 +200,9 @@ def show_git_tutorial(command):
             "diff": "🔍 git diff - Shows changes not yet staged",
             "branch": "🌿 git branch - Lists or creates branches",
             "checkout": "🔄 git checkout <branch> - Switches branches",
+            "reset": "⚠️ git reset --hard - Destructive! Use with caution",
+            "stash": "📦 git stash - Temporarily saves changes",
+            "clone": "📋 git clone <url> - Copies a remote repository",
         }
         if git_cmd in tutorials:
             return tutorials[git_cmd]
@@ -164,6 +216,10 @@ def check_risky_command(command):
         (r"sudo\s+rm", "⚠️ Sudo + rm: Double-check what you're deleting!"),
         (r"git\s+push\s+--force", "⚠️ Force push can overwrite remote history!"),
         (r"git\s+reset\s+--hard", "⚠️ Hard reset will delete uncommitted changes!"),
+        (r":\(\)\{\s*:\|\:&\s*\};:", "⚠️ FORK BOMB: This will crash your system!"),
+        (r"dd\s+if=", "⚠️ DANGEROUS: dd can wipe disks!"),
+        (r"mkfs", "⚠️ DANGEROUS: Formatting a filesystem!"),
+        (r"chmod\s+777", "⚠️ SECURITY: chmod 777 makes files world-writable!"),
     ]
     for pattern, warning in patterns:
         if re.search(pattern, command):
@@ -185,6 +241,10 @@ def handle_git_outside_repo(command):
     is_git_alias = base_cmd in GIT_ALIASES
     is_git_cmd = base_cmd == "git" and len(cmd_parts) > 1
     
+    # Don't intercept git init or git clone - we want to create repos!
+    if is_git_cmd and cmd_parts[1] in ["init", "clone"]:
+        return False
+    
     if not (is_git_alias or is_git_cmd):
         return False
     
@@ -192,30 +252,40 @@ def handle_git_outside_repo(command):
         return False
     
     print(f"\n{YELLOW}⚠️  Not in a git repository!{RESET}")
+    
+    # Show recent projects first
+    recent = get_recent_projects()
     projects = scan_git_projects()
     
-    if not projects:
-        print(f"{YELLOW}   No git projects found in ~/projects{RESET}")
+    if not projects and not recent:
+        print(f"{CYAN}   No git projects found in ~/projects{RESET}")
+        print(f"{CYAN}   Create one with: git init or git clone{RESET}")
         return False
     
-    print(f"\n{CYAN}📁 Your git projects:{RESET}")
-    for i, proj in enumerate(projects, 1):
-        print(f"   {GREEN}{i}.{RESET} {os.path.basename(proj)}")
+    print(f"\n{CYAN}📁 Recent projects:{RESET}")
+    all_projects = recent + [p for p in projects if p not in recent]
+    
+    for i, proj in enumerate(all_projects[:5], 1):
+        name = os.path.basename(proj)
+        print(f"   {GREEN}{i}.{RESET} {name} ({proj})")
     print(f"   {YELLOW}0.{RESET} Cancel")
+    print(f"   {YELLOW}c.{RESET} Create new repo here")
     
     try:
-        choice = input(f"\n{CYAN}Choose project (1-{len(projects)}): {RESET}")
+        choice = input(f"\n{CYAN}Choose project (1-{min(5, len(all_projects))}/0/c): {RESET}")
         if choice == "0":
             print(f"{CYAN}   Command cancelled.{RESET}")
-            return True  # Block the command
+            return True
+        if choice.lower() == "c":
+            print(f"{CYAN}   Run: git init to create a new repo{RESET}")
+            return True
         idx = int(choice) - 1
-        if 0 <= idx < len(projects):
-            target = projects[idx]
+        if 0 <= idx < len(all_projects):
+            target = all_projects[idx]
+            save_recent_project(target)
             print(f"{GREEN}✅ Changing to {target}{RESET}")
-            # We'll need to change directory and run command
-            # This requires shell integration - for now just warn
             print(f"{YELLOW}💡 Run: cd {target} && {command}{RESET}")
-            return True  # Block the original command
+            return True
     except:
         pass
     
@@ -282,9 +352,9 @@ def main():
         colored_countdown(3)
 
     # Check git add for dangerous files
-    git_warning = check_git_add(command)
+    git_warning = check_git_add_dangerous(command)
     if git_warning:
-        dangerous = check_dangerous_files()
+        dangerous = check_dangerous_files_in_repo()
         if dangerous:
             print(f"\n{YELLOW}{git_warning}{RESET}")
             print(f"{CYAN}   Found: {', '.join(dangerous)}{RESET}")
