@@ -1,0 +1,38 @@
+# Python virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Databases
+*.db
+*.sqlite
+
+# Secrets
+secrets/
+.env
+
+# Large files
+*.onnx
+*.pkl
+*.json
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Temp files
+*.tmp
+*.bak
+*.old
